@@ -38,12 +38,6 @@ BOOTMODE=false;
 ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true;
 $BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true;
 
-SHA1_STOCK="@SHA1_STOCK@"
-SHA1_KSU="@SHA1_KSU@"
-
-KEYCODE_UP=42
-KEYCODE_DOWN=41
-
 no_needed_kos='
 atmel_mxt_ts.ko
 cameralog.ko
@@ -104,57 +98,6 @@ mkfs_erofs() {
 
 is_mounted() { mount | grep -q " $1 "; }
 
-sha1() { ${bin}/magiskboot sha1 "$1"; }
-
-apply_patch() {
-	# apply_patch <src_path> <src_sha1> <dst_sha1> <bs_patch>
-	local src_path=$1
-	local src_sha1=$2
-	local dst_sha1=$3
-	local bs_patch=$4
-
-	local file_sha1=$(sha1 $src_path)
-	[ "$file_sha1" == "$dst_sha1" ] && return 0
-	[ "$file_sha1" == "$src_sha1" ] && ${bin}/bspatch "$src_path" "$src_path" "$bs_patch"
-	[ "$(sha1 $src_path)" == "$dst_sha1" ] || abort "! Failed to patch $src_path!"
-}
-
-get_keycheck_result() {
-	# Default behavior: 
-	# - press Vol+: return true (0)
-	# - press Vol-: return false (1)
-
-	# The first execution responds to the button press event,
-	# the second execution responds to the button release event.
-	${bin}/keycheck; ${bin}/keycheck
-	local r_keycode=$?
-	case $r_keycode in
-		"$KEYCODE_UP") return 0;;
-		"$KEYCODE_DOWN") return 1;;
-		*) abort "! Unknown keycode: $r_keycode"
-	esac
-}
-
-keycode_select() {
-	local prompt_text=$1
-	local r_keycode
-
-	ui_print " "
-	ui_print "# $prompt_text"
-	ui_print "#"
-	ui_print "# Vol+ = Yes, Vol- = No."
-	ui_print "# Please press the key..."
-	get_keycheck_result
-	r_keycode=$?
-	ui_print "#"
-	if [ "$r_keycode" -eq "0" ]; then
-		ui_print "- You chose Yes."
-	else
-		ui_print "- You chose No."
-	fi
-	return $r_keycode
-}
-
 # Check snapshot status
 # Technical details: https://blog.xzr.moe/archives/30/
 ${bin}/snapshotupdater_static dump &>/dev/null
@@ -209,15 +152,6 @@ if $skip_update_flag; then
 		*-force) skip_update_flag=false;;
 	esac
 fi
-
-# KernelSU
-keycode_select "Choose whether to install KernelSU support." && {
-	ui_print " "
-	ui_print "- Patching Kernel image..."
-	apply_patch ${home}/Image "$SHA1_STOCK" "$SHA1_KSU" ${home}/bs_patches/ksu.p
-} || {
-	[ "$(sha1 ${home}/Image)" == "$SHA1_STOCK" ] || abort "! Kernel image is corrupted!"
-}
 
 # Fix unable to mount image as read-write in recovery
 $BOOTMODE || setenforce 0
