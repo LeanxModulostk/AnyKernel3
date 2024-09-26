@@ -4,7 +4,7 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=Lightning Kernel by Siimsek | Telegram @SKProject
+kernel.string=Lean Kernel by Lean | Telegram @LeanHijosdesusMadres
 do.devicecheck=1
 do.modules=0
 do.systemless=1
